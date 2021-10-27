@@ -1,11 +1,12 @@
 import os
 
-from tensorflow.keras import models, layers, optimizers
+from tensorflow.keras import models, layers, optimizers, callbacks
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 
 
 class CatVsDogs:
-    def __init__(self, data_dir: str = "data"):
+    def __init__(self, data_dir: str = "data", batch_size: int = 32, tensorboard_data=True,
+                 tensorboard_log_dir="tensorboard"):
         self.test_dir = f"{data_dir}/test"
         self.valid_dir = f"{data_dir}/valid"
         self.train_dir = f"{data_dir}/train"
@@ -31,15 +32,26 @@ class CatVsDogs:
 
         self.train_img_gen = train_gen.flow_from_directory(self.train_dir,
                                                            target_size=(150, 150),
-                                                           batch_size=32,
+                                                           batch_size=batch_size,
                                                            class_mode='binary')
 
         self.valid_img_gen = test_gen.flow_from_directory(self.valid_dir,
                                                           target_size=(150, 150),
-                                                          batch_size=32,
+                                                          batch_size=batch_size,
                                                           class_mode='binary')
         self.model = None
         self.history = None
+
+        if tensorboard_data:
+            self.callbacks = [
+                callbacks.TensorBoard(
+                    log_dir=tensorboard_log_dir,
+                    histogram_freq=1,
+                    embeddings_freq=1,
+                )
+            ]
+        else:
+            self.callbacks = None
 
     def load_model(self, model_path: str):
         self.model = models.load_model(model_path)
@@ -74,7 +86,8 @@ class CatVsDogs:
 
         self.history = self.model.fit(self.train_img_gen,
                                       epochs=epochs,
-                                      validation_data=self.valid_img_gen)
+                                      validation_data=self.valid_img_gen,
+                                      callbacks=self.callbacks)
 
     def predict(self, img_data):
         self.model.predict(img_data)
